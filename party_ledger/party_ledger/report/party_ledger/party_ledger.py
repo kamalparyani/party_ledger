@@ -131,7 +131,8 @@ def get_filters(filters):
     filter_dict = {
         "posting_date": ["between", [filters.get("from_date"), filters.get("to_date")]],
         "company": filters.get("company"),
-        "party_type": filters.get("party_type")
+        "party_type": filters.get("party_type"),
+        "is_cancelled": 0  # This excludes both cancelled entries and their reversals
     }
     
     if filters.get("party"):
@@ -202,6 +203,7 @@ def format_number(value):
 
 def get_opening_balance(filters):
     balance_filters = get_balance_filters(filters)
+    balance_filters["is_cancelled"] = 0  # Exclude cancelled entries and their reversals
     opening_balance = frappe.db.sql("""
         SELECT 
             SUM(debit) - SUM(credit) as opening_balance
@@ -211,6 +213,7 @@ def get_opening_balance(filters):
             posting_date < %(from_date)s
             AND company = %(company)s
             AND party_type = %(party_type)s
+            AND is_cancelled = 0
             {party_condition}
     """.format(
         party_condition = "AND party = %(party)s" if balance_filters.get("party") else ""
