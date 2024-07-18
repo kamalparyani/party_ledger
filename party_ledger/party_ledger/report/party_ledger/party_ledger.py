@@ -28,7 +28,7 @@ def get_columns():
             "label": _("Detail"),
             "fieldname": "detail",
             "fieldtype": "Small Text",
-            "width": 300
+            "width": 400  # Increased width to accommodate remarks
         },
         {
             "label": _("Dr"),
@@ -47,12 +47,7 @@ def get_columns():
             "fieldname": "balance",
             "fieldtype": "Currency",
             "width": 100
-        },
-        {
-            "label": _("Remarks"),
-            "fieldname": "remarks",
-            "width": 400
-        },
+        }
     ]
 
 def get_gl_entries(filters):
@@ -86,8 +81,7 @@ def get_gl_entries(filters):
         "debit": format_currency(opening_balance) if opening_balance > 0 else "",
         "credit": format_currency(-opening_balance) if opening_balance < 0 else "",
         "balance": format_currency(opening_balance),
-        "detail": "Opening Balance",
-        "remarks": ""
+        "detail": "Opening Balance"
     })
     data.append(opening_row)
     
@@ -95,13 +89,18 @@ def get_gl_entries(filters):
         balance += flt(entry.debit) - flt(entry.credit)
         
         remarks = get_remarks(entry.voucher_type, entry.voucher_no, entry.remarks, payment_entries_with_custom_remarks)
+        detail = get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items"))
+        
+        if entry.voucher_type == "Sales Invoice" and remarks:
+            detail += "\n- - - - - -\n" + remarks
+        elif remarks:
+            detail = remarks + "\n" + detail if detail else remarks
         
         entry.update({
             "balance": format_currency(balance),
             "debit": format_currency(entry.debit),
             "credit": format_currency(entry.credit),
-            "detail": get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items")),
-            "remarks": remarks
+            "detail": detail
         })
         data.append(entry)
     
@@ -117,8 +116,7 @@ def get_gl_entries(filters):
         "debit": "",
         "credit": "",
         "balance": format_currency(balance),
-        "detail": "Closing Balance",
-        "remarks": ""
+        "detail": "Closing Balance"
     })
     data.append(closing_row)
     
