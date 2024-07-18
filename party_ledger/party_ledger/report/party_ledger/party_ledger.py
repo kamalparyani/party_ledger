@@ -69,12 +69,14 @@ def get_gl_entries(filters):
         order_by="posting_date, creation"
     )
     
+    payment_entries_with_custom_remarks = get_payment_entries_with_custom_remarks([entry.voucher_no for entry in gl_entries if entry.voucher_type == "Payment Entry"])
+    
     data = []
     balance = opening_balance
     
     # Add opening balance row
     opening_row = frappe._dict({
-        "posting_date": "",  # No date for opening balance
+        "posting_date": "",
         "account": filters.get("party") or filters.get("party_type"),
         "party_type": "",
         "party": "",
@@ -84,7 +86,7 @@ def get_gl_entries(filters):
         "debit": format_currency(opening_balance) if opening_balance > 0 else "",
         "credit": format_currency(-opening_balance) if opening_balance < 0 else "",
         "balance": format_currency(opening_balance),
-        "detail": "Opening Balance",  # Put "Opening Balance" in the Detail column
+        "detail": "Opening Balance",
         "remarks": ""
     })
     data.append(opening_row)
@@ -92,11 +94,14 @@ def get_gl_entries(filters):
     for entry in gl_entries:
         balance += flt(entry.debit) - flt(entry.credit)
         
+        remarks = get_remarks(entry.voucher_type, entry.voucher_no, entry.remarks, payment_entries_with_custom_remarks)
+        
         entry.update({
             "balance": format_currency(balance),
             "debit": format_currency(entry.debit),
             "credit": format_currency(entry.credit),
-            "detail": get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items"))
+            "detail": get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items")),
+            "remarks": remarks
         })
         data.append(entry)
     
@@ -112,12 +117,30 @@ def get_gl_entries(filters):
         "debit": "",
         "credit": "",
         "balance": format_currency(balance),
-        "detail": "Closing Balance",  # Put "Closing Balance" in the Detail column
+        "detail": "Closing Balance",
         "remarks": ""
     })
     data.append(closing_row)
     
     return data
+
+def get_payment_entries_with_custom_remarks(voucher_nos):
+    return frappe.get_all(
+        "Payment Entry",
+        filters={
+            "name": ["in", voucher_nos],
+            "custom_remarks": 1
+        },
+        pluck="name"
+    )
+
+def get_remarks(voucher_type, voucher_no, gl_remarks, payment_entries_with_custom_remarks):
+    if voucher_type == "Payment Entry":
+        return gl_remarks if voucher_no in payment_entries_with_custom_remarks else ""
+    elif voucher_type == "Sales Invoice":
+        return "" if gl_remarks.lower() == "no remarks" else gl_remarks
+    else:
+        return gl_remarks
 
 def format_currency(value):
     """Format currency value without insignificant decimal points."""
