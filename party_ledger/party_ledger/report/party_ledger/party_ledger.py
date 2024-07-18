@@ -56,29 +56,66 @@ def get_columns():
     ]
 
 def get_gl_entries(filters):
+    balance_filters = get_balance_filters(filters)
+    opening_balance = get_opening_balance(balance_filters)
+    
     gl_entries = frappe.db.get_all(
         "GL Entry",
         fields=[
-            "posting_date", "voucher_type", "voucher_no", "debit", "credit", "remarks", "against", "party", "party_type"
+            "posting_date", "account", "party_type", "party", "voucher_type", 
+            "voucher_no", "against", "debit", "credit", "remarks"
         ],
         filters=get_filters(filters),
         order_by="posting_date, creation"
     )
     
     data = []
-    balance = 0
+    balance = opening_balance
+    
+    # Add opening balance row
+    opening_row = frappe._dict({
+        "posting_date": "",  # No date for opening balance
+        "account": filters.get("party") or filters.get("party_type"),
+        "party_type": "",
+        "party": "",
+        "voucher_type": "",
+        "voucher_no": "",
+        "against": "",
+        "debit": format_currency(opening_balance) if opening_balance > 0 else "",
+        "credit": format_currency(-opening_balance) if opening_balance < 0 else "",
+        "balance": format_currency(opening_balance),
+        "detail": "Opening Balance",  # Put "Opening Balance" in the Detail column
+        "remarks": ""
+    })
+    data.append(opening_row)
+    
     for entry in gl_entries:
         balance += flt(entry.debit) - flt(entry.credit)
         
-        entry.debit = format_currency(entry.debit)
-        entry.credit = format_currency(entry.credit)
-        formatted_balance = format_currency(balance)
-        
         entry.update({
-            "balance": formatted_balance,
+            "balance": format_currency(balance),
+            "debit": format_currency(entry.debit),
+            "credit": format_currency(entry.credit),
             "detail": get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items"))
         })
         data.append(entry)
+    
+    # Add closing balance row
+    closing_row = frappe._dict({
+        "posting_date": filters.get("to_date"),
+        "account": filters.get("party") or filters.get("party_type"),
+        "party_type": "",
+        "party": "",
+        "voucher_type": "",
+        "voucher_no": "",
+        "against": "",
+        "debit": "",
+        "credit": "",
+        "balance": format_currency(balance),
+        "detail": "Closing Balance",  # Put "Closing Balance" in the Detail column
+        "remarks": ""
+    })
+    data.append(closing_row)
     
     return data
 
@@ -104,6 +141,18 @@ def get_filters(filters):
         filter_dict["voucher_no"] = filters.get("voucher_no")
     
     return filter_dict
+
+def get_balance_filters(filters):
+    balance_filters = {
+        "company": filters.get("company"),
+        "party_type": filters.get("party_type"),
+        "from_date": filters.get("from_date")
+    }
+    
+    if filters.get("party"):
+        balance_filters["party"] = filters.get("party")
+    
+    return balance_filters
 
 def get_invoice_items(voucher_type, voucher_no, group_items):
     if voucher_type in ["Sales Invoice", "Purchase Invoice"]:
@@ -150,3 +199,21 @@ def format_number(value):
     if value == 0:
         return "0"
     return f"{value:.0f}" if value.is_integer() else f"{value:.2f}".rstrip('0').rstrip('.')
+
+def get_opening_balance(filters):
+    balance_filters = get_balance_filters(filters)
+    opening_balance = frappe.db.sql("""
+        SELECT 
+            SUM(debit) - SUM(credit) as opening_balance
+        FROM 
+            `tabGL Entry`
+        WHERE 
+            posting_date < %(from_date)s
+            AND company = %(company)s
+            AND party_type = %(party_type)s
+            {party_condition}
+    """.format(
+        party_condition = "AND party = %(party)s" if balance_filters.get("party") else ""
+    ), balance_filters, as_dict=True)
+    
+    return opening_balance[0].opening_balance if opening_balance and opening_balance[0].opening_balance else 0
