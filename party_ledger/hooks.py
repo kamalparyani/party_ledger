@@ -227,6 +227,24 @@ app_license = "gpl-3.0"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+# All existing content remains the same
+
 reports = [
     "Party Ledger"
 ]
+
+doctype_js = {
+    "GL Entry": "public/js/gl_entry.js"
+}
+
+global_search_doctypes = {
+    "Default": [
+        {"doctype": "GL Entry"},
+    ]
+}
+
+get_data = {
+    "accounts": "party_ledger.config.accounts.get_data"
+}
+
+# Rest of the existing content remains the same

@@ -1,0 +1,138 @@
+<style>
+    /* 1. Add custom CSS for styling the report */
+    /* 2. Use a more professional font */
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    /* 4. Add a subtle background color to the entire report body */
+    .report-container {
+        background-color: #f9f9f9;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* 3. Center-align the report title and header information */
+    .report-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    /* 5. Use a different color for the main title to make it stand out */
+    h2 {
+        color: #1a5f7a;
+        margin-bottom: 10px;
+    }
+
+    h3 {
+        color: #457b9d;
+        margin-bottom: 5px;
+    }
+
+    h4 {
+        color: #666;
+        font-weight: normal;
+    }
+
+    /* 6. Add borders to the table for better definition */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    /* 7. Use alternating row colors in the table for improved readability */
+    .table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    /* 11. Use a slightly darker background color for the table header */
+    .table th {
+        background-color: #e6e6e6;
+        font-weight: bold;
+    }
+
+    /* 8. Right-align numeric columns */
+    .numeric {
+        text-align: right;
+    }
+
+    /* 14. Use a smaller font size for the "Printed On" date at the bottom */
+    .report-footer {
+        font-size: 0.9em;
+        color: #777;
+        text-align: right;
+        margin-top: 20px;
+    }
+
+    /* 19. Use a different style for Opening and Closing Balance rows */
+    .total-row {
+        font-weight: bold;
+        background-color: #e9ecef !important;
+    }
+
+    /* 17. Implement a sticky header for the table when scrolling */
+    .table thead {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1;
+    }
+</style>
+
+<div class="report-container">
+    <div class="report-header">
+        <h2>{%= __("Statement of Account") %}</h2>
+        <h3>{%= filters.party || filters.account %}</h3>
+        <h4>{%= frappe.datetime.str_to_user(filters.from_date) %} {%= __("to") %} {%= frappe.datetime.str_to_user(filters.to_date) %}</h4>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{%= __("Date") %}</th>
+                <th>{%= __("Voucher No") %}</th>
+                <th>{%= __("Detail") %}</th>
+                <th class="numeric">{%= __("Dr") %}</th>
+                <th class="numeric">{%= __("Cr") %}</th>
+                <th class="numeric">{%= __("Balance") %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for(var i=0, l=data.length; i<l; i++) { %}
+                <tr class="{%= data[i].detail === 'Opening Balance' || data[i].detail === 'Closing Balance' ? 'total-row' : '' %}">
+                    <td>{%= frappe.datetime.str_to_user(data[i].posting_date) %}</td>
+                    <td>{%= data[i].voucher_no %}</td>
+                    <td>
+                        {% if(data[i].detail === "Opening Balance" || data[i].detail === "Closing Balance") { %}
+                            <b>{%= data[i].detail %}</b>
+                        {% } else { %}
+                            {%= data[i].detail.replace(/\n/g, '<br>') %}
+                        {% } %}
+                    </td>
+                    <td class="numeric">
+                        {%= flt(data[i].debit, 2) == 0.0 ? "" : format_currency(data[i].debit, filters.company_currency) %}
+                    </td>
+                    <td class="numeric">
+                        {%= flt(data[i].credit, 2) == 0.0 ? "" : format_currency(data[i].credit, filters.company_currency) %}
+                    </td>
+                    <td class="numeric">
+                        {%= flt(data[i].balance, 2) == 0.0 ? "" : format_currency(data[i].balance, filters.company_currency) %}
+                    </td>
+                </tr>
+            {% } %}
+        </tbody>
+    </table>
+
+    <div class="report-footer">
+        Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
+    </div>
+</div>

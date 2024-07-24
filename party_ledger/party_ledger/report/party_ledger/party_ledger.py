@@ -9,6 +9,21 @@ def execute(filters=None):
     data = get_gl_entries(filters)
     return columns, data
 
+def get_data():
+    return [
+        {
+            "label": _("Accounting"),
+            "items": [
+                {
+                    "type": "report",
+                    "name": "Party Ledger",
+                    "doctype": "GL Entry",
+                    "is_query_report": True
+                },
+            ]
+        },
+    ]
+
 def get_columns():
     return [
         {
@@ -106,7 +121,7 @@ def get_gl_entries(filters):
     
     # Add closing balance row
     closing_row = frappe._dict({
-        "posting_date": filters.get("to_date"),
+        "posting_date": "",
         "account": filters.get("party") or filters.get("party_type"),
         "party_type": "",
         "party": "",
