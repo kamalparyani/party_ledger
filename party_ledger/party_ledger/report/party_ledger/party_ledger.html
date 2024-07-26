@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,12 +10,6 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.4;
             color: #333;
-        }
-
-        .report-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
         }
 
         .report-header {
@@ -45,7 +40,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.9em;
-            margin-top: 15px;
+
         }
 
         .table th {
@@ -53,7 +48,6 @@
             font-weight: bold;
             color: #ffffff;
             text-transform: uppercase;
-            padding: 12px 8px;
             border-bottom: 2px solid #ddd;
         }
 
@@ -74,7 +68,8 @@
             text-align: right;
         }
 
-        .opening-balance, .closing-balance {
+        .opening-balance,
+        .closing-balance {
             font-weight: bold;
         }
 
@@ -82,18 +77,71 @@
             font-size: 0.8em;
             color: #718096;
             text-align: right;
-            margin-top: 20px;
             padding-top: 10px;
             border-top: 1px solid #e2e8f0;
         }
+
+        @media print {
+            body {
+                font-size: 11pt;
+            }
+
+            .report-container {
+                margin: 0;
+                padding: 0;
+            }
+
+            .report-header {
+                position: running(header);
+            }
+
+            .table {
+                font-size: 8pt;
+            }
+
+            .table thead {
+                display: table-header-group;
+            }
+
+            .table tfoot {
+                display: table-footer-group;
+            }
+
+            .table tr {
+                page-break-inside: avoid;
+            }
+
+            .report-footer {
+                position: running(footer);
+            }
+
+            @page {
+                size: A4;
+                orientation: portrait;
+
+                @top-center {
+                    content: element(header);
+                }
+
+                @bottom-right {
+                    content: "Page " counter(page) " of " counter(pages);
+                }
+
+                @bottom-left {
+                    content: element(footer);
+                }
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="report-container">
         <div class="report-header">
             <h2>{%= __("Statement of Account") %}</h2>
             <h3>{%= filters.party || filters.account %}</h3>
-            <h4>{%= frappe.datetime.str_to_user(filters.from_date) %} {%= __("to") %} {%= frappe.datetime.str_to_user(filters.to_date) %}</h4>
+            <h4>{%= frappe.datetime.str_to_user(filters.from_date) %} {%= __("to") %} {%=
+                frappe.datetime.str_to_user(filters.to_date) %}</h4>
         </div>
 
         <table class="table">
@@ -108,29 +156,35 @@
                 </tr>
             </thead>
             <tbody>
-                {% for(var i=0, l=data.length; i<l; i++) { %}
-                    <tr class="{{ data[i].detail === 'Opening Balance' ? 'opening-balance' : 
+                {% for(var i=0, l=data.length; i<l; i++) { %} <tr class="{{ data[i].detail === 'Opening Balance' ? 'opening-balance' : 
                                   data[i].detail === 'Closing Balance' ? 'closing-balance' : '' }}">
-                        <td>{%= frappe.datetime.str_to_user(data[i].posting_date) %}</td>
-                        <td>{%= data[i].voucher_no %}</td>
-                        <td>{%= data[i].detail.replace(/\n/g, '<br>') %}</td>
-                        <td class="numeric">
-                            {%= flt(data[i].debit, 2) == 0.0 ? "" : format_currency(data[i].debit, filters.company_currency) %}
-                        </td>
-                        <td class="numeric">
-                            {%= flt(data[i].credit, 2) == 0.0 ? "" : format_currency(data[i].credit, filters.company_currency) %}
-                        </td>
-                        <td class="numeric">
-                            {%= flt(data[i].balance, 2) == 0.0 ? "" : format_currency(data[i].balance, filters.company_currency) %}
-                        </td>
+                    <td>{%= frappe.datetime.str_to_user(data[i].posting_date) %}</td>
+                    <td>{%= data[i].voucher_no %}</td>
+                    <td>{%= data[i].detail.replace(/\n/g, '<br>') %}</td>
+                    <td class="numeric">
+                        {%= flt(data[i].debit, 2) == 0.0 ? "" : format_currency(data[i].debit, filters.company_currency)
+                        %}
+                    </td>
+                    <td class="numeric">
+                        {%= flt(data[i].credit, 2) == 0.0 ? "" : format_currency(data[i].credit,
+                        filters.company_currency) %}
+                    </td>
+                    <td class="numeric">
+                        {%= flt(data[i].balance, 2) == 0.0 ? "" : format_currency(data[i].balance,
+                        filters.company_currency) %}
+                    </td>
                     </tr>
-                {% } %}
+                    {% } %}
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6" class="report-footer">
+                        Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
+                    </td>
+                </tr>
+            </tfoot>
         </table>
-
-        <div class="report-footer">
-            Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
-        </div>
     </div>
 </body>
+
 </html>
