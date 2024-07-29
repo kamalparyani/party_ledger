@@ -46,13 +46,13 @@ def get_columns():
             "width": 400  # Increased width to accommodate remarks
         },
         {
-            "label": _("Dr"),
+            "label": _("Debit"),
             "fieldname": "debit",
             "fieldtype": "Currency",
             "width": 100
         },
         {
-            "label": _("Cr"),
+            "label": _("Credit"),
             "fieldname": "credit",
             "fieldtype": "Currency",
             "width": 100
