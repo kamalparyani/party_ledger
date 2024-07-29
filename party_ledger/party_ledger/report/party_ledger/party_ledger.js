@@ -40,7 +40,8 @@ frappe.query_reports["Party Ledger"] = {
                     frappe.throw(__("Please select Party Type first"));
                 }
                 return party_type;
-            }
+            },
+            "reqd": 1
         },
         {
             "fieldname": "voucher_no",
