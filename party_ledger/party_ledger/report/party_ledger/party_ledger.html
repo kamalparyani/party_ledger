@@ -162,15 +162,27 @@
                     <td>{%= data[i].voucher_no %}</td>
                     <td>{%= data[i].detail.replace(/\n/g, '<br>') %}</td>
                     <td class="numeric">
-                        {%= flt(data[i].debit, 2) == 0.0 ? "" : format_currency(data[i].debit, filters.company_currency)
-                        %}
+                        {% if (flt(data[i].debit, 2) == 0.0) { %}
+                            
+                        {% } else { %}
+                        {%= filters.remove_decimals ? 
+                            format_currency(data[i].debit, filters.company_currency).replace(/\.?0+$/, '') : 
+                            format_currency(data[i].debit, filters.company_currency) %}
+                        {% } %}
                     </td>
                     <td class="numeric">
-                        {%= flt(data[i].credit, 2) == 0.0 ? "" : format_currency(data[i].credit,
-                        filters.company_currency) %}
+                        {% if (flt(data[i].credit, 2) == 0.0) { %}
+                            
+                        {% } else { %}
+                        {%= filters.remove_decimals ? 
+                            format_currency(data[i].credit, filters.company_currency).replace(/\.?0+$/, '') : 
+                            format_currency(data[i].credit, filters.company_currency) %}
+                        {% } %}
                     </td>
                     <td class="numeric">
-                        {%= format_currency(data[i].balance, filters.company_currency) %}
+                        {%= filters.remove_decimals ? 
+                            format_currency(data[i].balance, filters.company_currency).replace(/\.?0+$/, '') : 
+                            format_currency(data[i].balance, filters.company_currency) %}
                     </td>
                     </tr>
                     {% } %}
