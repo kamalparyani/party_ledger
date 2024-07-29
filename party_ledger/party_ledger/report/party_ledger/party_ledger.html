@@ -170,8 +170,7 @@
                         filters.company_currency) %}
                     </td>
                     <td class="numeric">
-                        {%= flt(data[i].balance, 2) == 0.0 ? "" : format_currency(data[i].balance,
-                        filters.company_currency) %}
+                        {%= format_currency(data[i].balance, filters.company_currency) %}
                     </td>
                     </tr>
                     {% } %}
