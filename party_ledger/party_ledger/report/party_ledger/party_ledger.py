@@ -69,15 +69,36 @@ def get_gl_entries(filters):
     balance_filters = get_balance_filters(filters)
     opening_balance = get_opening_balance(balance_filters)
     
-    gl_entries = frappe.db.get_all(
-        "GL Entry",
-        fields=[
-            "posting_date", "account", "party_type", "party", "voucher_type", 
-            "voucher_no", "against", "debit", "credit", "remarks"
-        ],
-        filters=get_filters(filters),
-        order_by="posting_date, creation"
-    )
+    conditions = """
+        gle.posting_date BETWEEN %(from_date)s AND %(to_date)s
+        AND gle.company = %(company)s
+        AND gle.party_type = %(party_type)s
+        AND gle.is_cancelled = 0
+    """
+    
+    if filters.get("party"):
+        conditions += " AND gle.party = %(party)s"
+    
+    if filters.get("voucher_no"):
+        conditions += " AND gle.voucher_no = %(voucher_no)s"
+    
+    if filters.get("exclude_system_generated"):
+        conditions += " AND (je.is_system_generated IS NULL OR je.is_system_generated = 0)"
+    
+    gl_entries = frappe.db.sql("""
+        SELECT 
+            gle.posting_date, gle.account, gle.party_type, gle.party, 
+            gle.voucher_type, gle.voucher_no, gle.against, gle.debit, 
+            gle.credit, gle.remarks
+        FROM 
+            `tabGL Entry` gle
+        LEFT JOIN 
+            `tabJournal Entry` je ON gle.voucher_no = je.name AND gle.voucher_type = 'Journal Entry'
+        WHERE 
+            {conditions}
+        ORDER BY 
+            gle.posting_date, gle.creation
+    """.format(conditions=conditions), filters, as_dict=True)
     
     payment_entries_with_custom_remarks = get_payment_entries_with_custom_remarks([entry.voucher_no for entry in gl_entries if entry.voucher_type == "Payment Entry"])
     
@@ -156,34 +177,18 @@ def get_remarks(voucher_type, voucher_no, gl_remarks, payment_entries_with_custo
         return gl_remarks
 
 def format_currency(value):
-    """Format currency value without insignificant decimal points."""
     if isinstance(value, str):
         value = flt(value)
     if value == 0:
         return "0"
     return f"{value:.0f}" if value.is_integer() else f"{value:.2f}".rstrip('0').rstrip('.')
 
-def get_filters(filters):
-    filter_dict = {
-        "posting_date": ["between", [filters.get("from_date"), filters.get("to_date")]],
-        "company": filters.get("company"),
-        "party_type": filters.get("party_type"),
-        "is_cancelled": 0  # This excludes both cancelled entries and their reversals
-    }
-    
-    if filters.get("party"):
-        filter_dict["party"] = filters.get("party")
-    
-    if filters.get("voucher_no"):
-        filter_dict["voucher_no"] = filters.get("voucher_no")
-    
-    return filter_dict
-
 def get_balance_filters(filters):
     balance_filters = {
         "company": filters.get("company"),
         "party_type": filters.get("party_type"),
-        "from_date": filters.get("from_date")
+        "from_date": filters.get("from_date"),
+        "exclude_system_generated": filters.get("exclude_system_generated")
     }
     
     if filters.get("party"):
@@ -238,21 +243,28 @@ def format_number(value):
     return f"{value:.0f}" if value.is_integer() else f"{value:.2f}".rstrip('0').rstrip('.')
 
 def get_opening_balance(filters):
-    balance_filters = get_balance_filters(filters)
-    balance_filters["is_cancelled"] = 0  # Exclude cancelled entries and their reversals
+    conditions = """
+        gle.posting_date < %(from_date)s
+        AND gle.company = %(company)s
+        AND gle.party_type = %(party_type)s
+        AND gle.is_cancelled = 0
+    """
+    
+    if filters.get("party"):
+        conditions += " AND gle.party = %(party)s"
+    
+    if filters.get("exclude_system_generated"):
+        conditions += " AND (je.is_system_generated IS NULL OR je.is_system_generated = 0)"
+    
     opening_balance = frappe.db.sql("""
         SELECT 
-            SUM(debit) - SUM(credit) as opening_balance
+            SUM(gle.debit) - SUM(gle.credit) as opening_balance
         FROM 
-            `tabGL Entry`
+            `tabGL Entry` gle
+        LEFT JOIN
+            `tabJournal Entry` je ON gle.voucher_no = je.name AND gle.voucher_type = 'Journal Entry'
         WHERE 
-            posting_date < %(from_date)s
-            AND company = %(company)s
-            AND party_type = %(party_type)s
-            AND is_cancelled = 0
-            {party_condition}
-    """.format(
-        party_condition = "AND party = %(party)s" if balance_filters.get("party") else ""
-    ), balance_filters, as_dict=True)
+            {conditions}
+    """.format(conditions=conditions), filters, as_dict=True)
     
     return opening_balance[0].opening_balance if opening_balance and opening_balance[0].opening_balance else 0

@@ -59,6 +59,12 @@ frappe.query_reports["Party Ledger"] = {
             "label": __("Remove Insignificant Decimals"),
             "fieldtype": "Check",
             "default": 1
+        },
+        {
+            "fieldname": "exclude_system_generated",
+            "label": __("Exclude System Generated Entries"),
+            "fieldtype": "Check",
+            "default": 1
         }
     ]
 };
