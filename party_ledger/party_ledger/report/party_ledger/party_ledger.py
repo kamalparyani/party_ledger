@@ -124,8 +124,11 @@ def get_gl_entries(filters):
     for entry in gl_entries:
         balance += flt(entry.debit) - flt(entry.credit)
         
-        remarks = get_remarks(entry.voucher_type, entry.voucher_no, entry.remarks, payment_entries_with_custom_remarks)
+        remarks = get_remarks(entry, payment_entries_with_custom_remarks)
         detail = get_invoice_items(entry.voucher_type, entry.voucher_no, filters.get("group_items"))
+        
+        if filters.get("show_against_account") and entry.voucher_type == "Journal Entry" and entry.against and entry.against != entry.account:
+            detail = f"Against: {entry.against}\n" + (detail if detail else "")
         
         if entry.voucher_type == "Sales Invoice" and remarks:
             detail += "\n- - - - - -\n" + remarks
@@ -168,13 +171,13 @@ def get_payment_entries_with_custom_remarks(voucher_nos):
         pluck="name"
     )
 
-def get_remarks(voucher_type, voucher_no, gl_remarks, payment_entries_with_custom_remarks):
-    if voucher_type == "Payment Entry":
-        return gl_remarks if voucher_no in payment_entries_with_custom_remarks else ""
-    elif voucher_type == "Sales Invoice":
-        return "" if gl_remarks.lower() == "no remarks" else gl_remarks
+def get_remarks(entry, payment_entries_with_custom_remarks):
+    if entry.voucher_type == "Payment Entry":
+        return entry.remarks if entry.voucher_no in payment_entries_with_custom_remarks else ""
+    elif entry.voucher_type == "Sales Invoice":
+        return "" if entry.remarks.lower() == "no remarks" else entry.remarks
     else:
-        return gl_remarks
+        return entry.remarks
 
 def format_currency(value):
     if isinstance(value, str):

@@ -65,6 +65,12 @@ frappe.query_reports["Party Ledger"] = {
             "label": __("Exclude System Generated Entries"),
             "fieldtype": "Check",
             "default": 1
+        },
+        {
+            "fieldname": "show_against_account",
+            "label": __("Show Against Account"),
+            "fieldtype": "Check",
+            "default": 1
         }
     ]
 };
